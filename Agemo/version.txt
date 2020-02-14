@@ -1,0 +1,43 @@
+Features
+. disassemble Log
+. CPU pause/resume
+. mem dump/load(RAM, VRAM, PRAM, ..)
+. mem read/write monitor
+. pause CPU on pc=address
+. VRAM viewer(only support color mode 15 bit). (1:22 2003-3-14)
+. mem area used monitor (8:12 2003-4-9)
+. pause CPU on mem address = some value(byte) (23:19 2003-4-14)
+. update to pcsx 1.5 (*)  (14:24 2003-7-13)
+. general registers show/edit (*), mem show/edit (in a independ window) (19:20 2003-7-13)
+. VRAM viewer (4bit CLUT, 8bit CLUT, 15bit direct, 24bit direct)
+
+
+bugs fixed. 
+. if pause cpu on pc is set, exec N ops will malfunction
+. when pause CPU, now added sth like doevents.
+. after load save, CPU will be paused, and ops counter is reseted(3:19 2003-3-14)
+. now use SLPSxxx.xx as save filename(not use cdrom label) (7:12 2003-4-9)
+. MEM moniter. mem range should > 4 when capture LW/SW, that's a bug
+  修正了求内存交集的算法。
+. F1/F2/F3 key, should display in debug window.
+. dump button: if cpu is not paused, prompt pause CPU to dump and cancel.
+. now auto add address header 0x8 , if address is not compelete (22:00 2003-4-11)
+. if cpu is paused by "pause cpu on pc", click resume button doesn't work. (15:00 2003-7-13)
+. v 1.21 修正了DUMP显存的BUG。另外，显存不再LOAD(2003-9-15 14:11)
+. v 1.22 修正了pause CPU时窗口disasm可能的地址错误(execl无问题，其他错误+4)(2003-9-15 14:39)
+. v 1.23 修正实时disasm遇到跳转指令不显示下一条的错误 (2003-9-15 15:52)
+. v 1.24 修正指令log的缓冲错误。
+. v 1.25 修改了一点 disasm 的算法，以及界面
+. v 1.26 重新调整了一下界面
+. v 1.30 加入GPU Upload监视, Prims解析，CDROM 读监视 (2003-11-12)
+. v 1.31 加入GPU 一些新的原语的支持 (2004-1-12)
+. v 1.32 反编译器计算出了相对地址的真实地址，另外对格式进行了少量修正 (2004-1-26)
+. v 1.33 暂停cpu时候自动刷新asm log (2004-1-28 9:34)
+. v 1.34 对未知原语的解析不会退出，而是记录下来 (2004-2-20 20:03)
+. v 1.35 对MDEC读写cdrom的支持 (2004-3-30 20:37)
+. v 1.36 界面修正，加入total ops的提示，cdrom监视加入绝对扇区的提示(2004-4-1 13:16)
+. v 1.37 加入内存读写对齐(2、4)检查。不对齐的地址在模拟器上没事，但PS上会死机。（2004-6-20 20:33）
+. v 1.38 内存读写检测忽略了最高位 0x80000000 = 0x00000000
+. v 1.39 加入spu upload监视
+
+

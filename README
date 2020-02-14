@@ -1,0 +1,33 @@
+PCSX-Reloaded
+-------------------------------
+
+PCSX-Reloaded is a forked version of the dead PCSX emulator, with a nicer
+interface and several improvements to stability and functionality.
+
+PCSX-Reloaded uses the PSEMU plugin interface to provide most functionality;
+without them, you will not be able to use it to play games. PCSX-Reloaded
+provides a number of plugins to provide basic functionality out of the box.
+
+PCSX-Reloaded has a very capable Internal HLE BIOS that can run many games
+without problems. It is recommended that you use it. However, if you own a
+real PlayStation, you may be able to use your own BIOS image. PCSX-Reloaded
+will find it in ~/.pcsx/bios/ or /usr/share/psemu/bios/ if you place it there.
+This can improve compatibility, especially with certain games and with the
+use of memory cards.
+
+See the doc/ folder in the source, or /usr/share/doc/pcsx/ on Debian systems,
+for more detailed information on PCSX-Reloaded. A UNIX manpage is also
+available.
+
+__________________________________________________________
+Agemo debugger hack (Only modified for Win32)
+
+Agemo PSX Debugger code very roughly hacked back in from an ancient version of pcsx (not reloaded) I could not get working with any available plugin I could find.
+
+The debugger doesn't work properly, and there is significant code "massaging" to do in order to get this fully working - however the part that works correctly (as far as I tested) is the registers/mem editor (shown by cliking the "view regs" checkbox on the main debugger window.
+
+Currently the read function (which I added for my purposes - determining that a joker code was wrong!!!) is hardcoded to only return 2 bytes.
+
+If you want the dump function to work, you must have a folder named "dump" (no quotes) in the same folder as the executable (pcsx).
+
+The pre-compiled windows binaries can be found for use in this repo under win32/build/debug.
