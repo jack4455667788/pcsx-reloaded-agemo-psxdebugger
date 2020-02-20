@@ -876,8 +876,8 @@ void CALLFunc(u32 func) {
 
 /* call rel32 */
 void CALL32(u32 to) {
-	write8(0xE8); 
-	write32(to); 
+	write8(0xE8);
+	write32(to);
 }
 
 /* call r32 */

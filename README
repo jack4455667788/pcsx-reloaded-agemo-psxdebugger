@@ -20,14 +20,29 @@ for more detailed information on PCSX-Reloaded. A UNIX manpage is also
 available.
 
 __________________________________________________________
-Agemo debugger hack (Only modified for Win32)
+Agemo debugger hack (Only modified for Win32) - The ONLY open source psx emmulator with debugger (that I am aware of)!
 
-Agemo PSX Debugger code very roughly hacked back in from an ancient version of pcsx (not reloaded) I could not get working with any available plugin I could find.
+Agemo PSX Debugger code very roughly hacked back in from an ancient version of pcsx (not reloaded) that I could not get working with any available plugin I could find (potentially due to my system being win7 and/or 64-bit)
 
-The debugger doesn't work properly, and there is significant code "massaging" to do in order to get this fully working - however the part that works correctly (as far as I tested) is the registers/mem editor (shown by cliking the "view regs" checkbox on the main debugger window.
+The debugger mostly works now. If you run in dynarec mode (i.e. WITHOUT the Configuration --> CPU --> "Enable Interpreter CPU" checkbox checked) you may well miss breakpoints.  Currently the breakpoints all rely on psxmemwrite and psxmemread calls which are not always used in dynarec mode (it will never be quite as fast as directly writing to memory without any routines like those).  If you want completely reliable breakpoints, use interpreter mode.  If you run into stuttering / glitched sound issues, try editing the sound settings to be lowest resource usage possible.
 
-Currently the read function (which I added for my purposes - determining that a joker code was wrong!!!) is hardcoded to only return 2 bytes.
+Currently the read function (which I added for my purposes - determining that a joker code was wrong!!!) is hardcoded to only return 2 bytes. This is one of many desirable debugger functions that leave a lot to be desired.
 
-If you want the dump function to work, you must have a folder named "dump" (no quotes) in the same folder as the executable (pcsx).
+If you want the dump function to work, you must have a folder named "dump" (no quotes) in the same folder as the executable (pcsx).  If you want save states to work you need a folder named "sstates" in the same location.
 
 The pre-compiled windows binaries can be found for use in this repo under win32/build/debug.
+
+Things that work :
+
+Memory Range Breakpoints (read and write)
+PC execute breakpoints
+Memory value breakpoint (only 1 byte supported currently)
+memory dumps (ram, vram, and bios)
+Pause/Resume gameplay
+asm logging to file (asm.log found in root of pcsx executable directory)
+
+Known Bugs / Issues :
+
+Because of the way the debug routine works, duplicates of assembly instructions are found in the log (if checkbox is enabled on debugger window) and in the dialog box in the debugger window.
+No memory viewer :( and the read function in the register only returns 2 bytes (they are byte-swapped from what is actually found in the dumps / memory)
+Dynarec mode doesn't work (always, it works sometimes...) with breakpoints.  Best stay in interpreter mode for now.

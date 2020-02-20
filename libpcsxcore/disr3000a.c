@@ -99,6 +99,15 @@ typedef char* (*TdisR3000AF)(u32 code, u32 pc);
 #define dOffset()	sprintf(ostr, "%s %8.8x,", ostr, _Branch_)
 #define dCode()		sprintf(ostr, "%s %8.8x,", ostr, (code >> 6) & 0xffffff)
 
+#define dGPRprev(i)		sprintf(ostr, "%s %8.8x (%s),", ostr, psxRegsPrev.GPR.r[i], disRNameGPR[i])
+#define dCP0prev(i)		sprintf(ostr, "%s %8.8x (%s),", ostr, psxRegsPrev.CP0.r[i], disRNameCP0[i])
+#define dCP2Dprev(i)	sprintf(ostr, "%s %8.8x (%s),", ostr, psxRegsPrev.CP2D.r[i], disRNameCP2D[i])
+#define dCP2Cprev(i)	sprintf(ostr, "%s %8.8x (%s),", ostr, psxRegsPrev.CP2C.r[i], disRNameCP2C[i])
+#define dHIprev()		sprintf(ostr, "%s %8.8x (%s),", ostr, psxRegsPrev.GPR.n.hi, "hi")
+#define dLOprev()		sprintf(ostr, "%s %8.8x (%s),", ostr, psxRegsPrev.GPR.n.lo, "lo")
+#define dOfBprev()		sprintf(ostr, "%s %4.4x (%8.8x (%s)) [%8.8x]", ostr, _Im_, psxRegsPrev.GPR.r[_Rs_], disRNameGPR[_Rs_], AGEMO_CALC_ADDR(psxRegsPrev.GPR.r[_Rs_], _Im_))
+
+
 unsigned int AGEMO_CALC_ADDR(unsigned int _base, unsigned int _off)
 {
 	if (_off >= 0x8000)

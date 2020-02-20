@@ -30,6 +30,7 @@
 
 R3000Acpu *psxCpu = NULL;
 psxRegisters psxRegs;
+psxRegisters psxRegsPrev;
 
 extern __int64 agemo_ops_total_exec;
 

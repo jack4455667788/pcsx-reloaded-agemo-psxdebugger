@@ -180,6 +180,7 @@ typedef struct {
 } psxRegisters;
 
 extern psxRegisters psxRegs;
+extern psxRegisters psxRegsPrev;
 
 /*
 Formula One 2001

@@ -336,7 +336,7 @@ static void iBranch(u32 branchPC, int savectx) {
 	}
 
 	pc+= 4;
-	pRecBSC[psxRegs.code>>26]();
+	pRecBSC[psxRegs.code>>26](); // processes assembly / decompiles to x86 - calls individual asm operations lbu, lw, sw etc.
 
 	iFlushRegs();
 	iStoreCycle();
@@ -526,7 +526,7 @@ __inline static void execute() {
 	if (*recFunc == 0) {
 		recRecompile();
 	}
-	(*recFunc)();
+	(*recFunc)(); // value changes mysteriously on this call .... no existing breakpoints hit....
 }
 
 static void recExecute() {
@@ -1886,6 +1886,26 @@ void recLWR() {
 	}
 }
 
+void doublecheck_value_asm_direct(u32 mem) {
+	u32 checkvalue = 0x8011627C;
+	u16 plusorminus = 0x8;
+
+	if (mem == checkvalue || mem < (u32)(checkvalue + plusorminus) && mem >(u32)(checkvalue + plusorminus)) {
+		mem = mem;
+	}
+	else {
+		if ((u32)(checkvalue & 0xffffff) == mem || (u32)(checkvalue & 0xffffff) < (u32)(mem + plusorminus) && (u32)(checkvalue & 0xffffff) > (u32)(mem - plusorminus)) {
+			mem = mem;
+		}
+		if ((u32)(checkvalue + 0x20000000) == mem || (u32)(checkvalue + 0x20000000) < (u32)(mem + plusorminus) && (u32)(checkvalue + 0x20000000) > (u32)(mem - plusorminus)) {
+			mem = mem;
+		}
+		if ((u32)(checkvalue + 0xA0000000) == mem || (u32)(checkvalue + 0xA0000000) < (u32)(mem + plusorminus) && (u32)(checkvalue + 0xA0000000) > (u32)(mem - plusorminus)) {
+			mem = mem;
+		}
+	}
+}
+
 static void recSB() {
 // mem[Rs + Im] = Rt
 
@@ -1905,6 +1925,7 @@ static void recSB() {
 
 			PUSH32I(1);
 			PUSH32I(addr & ~3);
+			doublecheck_value_asm_direct(addr & ~3);
 			CALLFunc((u32)&recClear);
 			resp += 8;
 			return;
@@ -1952,6 +1973,7 @@ static void recSH() {
 
 			PUSH32I(1);
 			PUSH32I(addr & ~3);
+			doublecheck_value_asm_direct(addr & ~3);
 			CALLFunc((u32)&recClear);
 			resp += 8;
 			return;
@@ -2006,14 +2028,17 @@ static void recSW() {
 
 		if ((t & 0x1fe0) == 0 && (t & 0x1fff) != 0) {
 			if (IsConst(_Rt_)) {
+				doublecheck_value_asm_direct(addr & 0x1fffff);
 				MOV32ItoM((u32)&psxM[addr & 0x1fffff], iRegs[_Rt_].k);
 			} else {
 				MOV32MtoR(EAX, (u32)&psxRegs.GPR.r[_Rt_]);
+				doublecheck_value_asm_direct(addr & 0x1fffff);
 				MOV32RtoM((u32)&psxM[addr & 0x1fffff], EAX);
 			}
 
 			PUSH32I(1);
 			PUSH32I(addr);
+			doublecheck_value_asm_direct(addr & ~3);
 			CALLFunc((u32)&recClear);
 			resp += 8;
 			return;
@@ -2021,9 +2046,11 @@ static void recSW() {
 
 		if (t == 0x1f80 && addr < 0x1f801000) {
 			if (IsConst(_Rt_)) {
+				doublecheck_value_asm_direct(addr & 0x1fffff);
 				MOV32ItoM((u32)&psxH[addr & 0xfff], iRegs[_Rt_].k);
 			} else {
 				MOV32MtoR(EAX, (u32)&psxRegs.GPR.r[_Rt_]);
+				doublecheck_value_asm_direct(addr & 0x1fffff);
 				MOV32RtoM((u32)&psxH[addr & 0xfff], EAX);
 			}
 			return;
@@ -2040,9 +2067,11 @@ static void recSW() {
 				case 0x1f801074:
 				case 0x1f8010f0:
 					if (IsConst(_Rt_)) {
+						doublecheck_value_asm_direct(addr & 0x1fffff);
 						MOV32ItoM((u32)&psxH[addr & 0xffff], iRegs[_Rt_].k);
 					} else {
 						MOV32MtoR(EAX, (u32)&psxRegs.GPR.r[_Rt_]);
+						doublecheck_value_asm_direct(addr & 0x1fffff);
 						MOV32RtoM((u32)&psxH[addr & 0xffff], EAX);
 					}
 					return;
@@ -2103,9 +2132,11 @@ static void recSWBlock(int count) {
 		if ((t & 0x1fe0) == 0 && (t & 0x1fff) != 0) {
 			for (i = 0; i < count; i++, code++, addr += 4) {
 				if (IsConst(_fRt_(*code))) {
+					doublecheck_value_asm_direct(addr & 0x1fffff);
 					MOV32ItoM((u32)&psxM[addr & 0x1fffff], iRegs[_fRt_(*code)].k);
 				} else {
 					MOV32MtoR(EAX, (u32)&psxRegs.GPR.r[_fRt_(*code)]);
+					doublecheck_value_asm_direct(addr & 0x1fffff);
 					MOV32RtoM((u32)&psxM[addr & 0x1fffff], EAX);
 				}
 			}
@@ -2182,6 +2213,7 @@ void recSWL() {
 		if ((t & 0x1fe0) == 0 && (t & 0x1fff) != 0) {
 			MOV32MtoR(EAX, (u32)&psxM[addr & 0x1ffffc]);
 			iSWLk(addr & 3);
+			doublecheck_value_asm_direct(addr & 0x1ffffc);
 			MOV32RtoM((u32)&psxM[addr & 0x1ffffc], EAX);
 			return;
 		}
@@ -2189,6 +2221,7 @@ void recSWL() {
 		if (t == 0x1f80 && addr < 0x1f801000) {
 			MOV32MtoR(EAX, (u32)&psxH[addr & 0xffc]);
 			iSWLk(addr & 3);
+			doublecheck_value_asm_direct(addr & 0xffc);
 			MOV32RtoM((u32)&psxH[addr & 0xffc], EAX);
 			return;
 		}
@@ -3137,7 +3170,7 @@ static void recRecompile() {
 
 		pc += 4;
 		count++;
-		pRecBSC[psxRegs.code >> 26]();
+		pRecBSC[psxRegs.code >> 26](); // populate x86 asm copy of mips psx asm command - process asm (mips -> x86) in ram for execution by execute() later.
 
 		if (branch) {
 			branch = 0;

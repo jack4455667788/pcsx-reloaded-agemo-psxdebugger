@@ -4,8 +4,7 @@
 #include <stdio.h>
 #include "..\libpcsxcore\psxcommon.h"
 #include "r3000a.h"
-
-
+#include "..\libpcsxcore\psxinterpreter.h"
 
 BOOL CALLBACK DbgDlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK DbgRegsDlgProc(HWND, UINT, WPARAM, LPARAM);
@@ -25,6 +24,7 @@ void UI_OnChkSpuUpload();
 unsigned long agemo_w_ram_1=-1;
 unsigned long agemo_w_ram_2=-1;
 int	agemo_flag_boot_pause = 0;		//default is no pause
+int firstinstruction = 0;
 
 void UI_OnChkPauseR();
 unsigned long agemo_r_ram_1=-1;
@@ -53,6 +53,7 @@ void __agemo_show_regs();
 void __agemo_reg_update();
 void __agemo_mem_update();
 void __agemo_mem_read();
+void __agemo_step_next_instruction();
 
 HWND hDbg;
 HWND hRegs;
@@ -63,6 +64,8 @@ HINSTANCE hCurInst;
 // extern vars to control 
 extern int agemo_flag_log;
 extern int agemo_flag_pause_cpu;
+int agemo_paused_disassembly = 1;
+int agemo_paused_disassembly_chk = 0;
 int agemo_flag_gpu_upload = 0;
 int agemo_flag_gpu_chain = 0;
 int agemo_flag_cdrom_read = 0;
@@ -166,13 +169,15 @@ void Agemo_OnReadMem(u32 uMem, int nBytes, u32 rValue)
 		if(nBytes == 2 && uMem % 2 != 0)
 		{
 			AgemoTrace("CPU Break, non-valid mem address read at %08X, %d bytes", uMem, nBytes);
-			__agemo_pause_cpu(1);
+			if (!agemo_flag_pause_cpu)
+				__agemo_pause_cpu(1);
 			return;
 		}
 		if(nBytes == 4 && uMem % 4 != 0)
 		{
 			AgemoTrace("CPU Break, non-valid mem address read at %08X, %d bytes", uMem, nBytes);
-			__agemo_pause_cpu(1);
+			if (!agemo_flag_pause_cpu)
+				__agemo_pause_cpu(1);
 			return;
 		}
 	}
@@ -180,10 +185,11 @@ void Agemo_OnReadMem(u32 uMem, int nBytes, u32 rValue)
 	//交集的判定
 	if (uMem <= agemo_r_ram_2 )
 	{
-		if( uMem + nBytes -1 >= agemo_r_ram_1)
+		if( (u32)(uMem + nBytes -1) >= agemo_r_ram_1)
 		{
 			AgemoTrace("CPU Break, mem read at %08X, %d bytes, value %08X", uMem, nBytes, rValue);
-			__agemo_pause_cpu(1);
+			if (!agemo_flag_pause_cpu)
+				__agemo_pause_cpu(1);
 		}
 	}
 /*
@@ -204,13 +210,15 @@ void Agemo_OnWriteMem(u32 uMem, int nBytes, u32 wValue)
 		if(nBytes == 2 && uMem % 2 != 0)
 		{
 			AgemoTrace("CPU Break, non-valid mem address read at %08X, %d bytes", uMem, nBytes);
-			__agemo_pause_cpu(1);
+			if (!agemo_flag_pause_cpu)
+				__agemo_pause_cpu(1);
 			return;
 		}
 		if(nBytes == 4 && uMem % 4 != 0)
 		{
 			AgemoTrace("CPU Break, non-valid mem address read at %08X, %d bytes", uMem, nBytes);
-			__agemo_pause_cpu(1);
+			if (!agemo_flag_pause_cpu)
+				__agemo_pause_cpu(1);
 			return;
 		}
 	}
@@ -218,19 +226,21 @@ void Agemo_OnWriteMem(u32 uMem, int nBytes, u32 wValue)
 
 	if (uMem <= agemo_w_ram_2 )
 	{
-		if( uMem + nBytes -1 >= agemo_w_ram_1)
+		if ((u32)(uMem + nBytes - 1) >= agemo_w_ram_1)
 		{
 			AgemoTrace("CPU Break, Mem Write at %08X, %d bytes, value %08X", uMem, nBytes, wValue);
-			__agemo_pause_cpu(1);
+			if (!agemo_flag_pause_cpu)
+				__agemo_pause_cpu(1);
 		}
 	}
 
-	if( uMem <= agemo_memval_addr && uMem + nBytes > agemo_memval_addr)
+	if( uMem <= agemo_memval_addr && (u32)(uMem + nBytes) > agemo_memval_addr)
 	{
 		if((u8)psxM[uMem] == agemo_memval_val) //uMem-0x80000000 seemed to be expecting the virtual, not file offset, at some point in the past. 
 		{
 			AgemoTrace("CPU Break, Mem address %08X = %02x", uMem, agemo_memval_val);
-			__agemo_pause_cpu(1);
+			if (!agemo_flag_pause_cpu)
+				__agemo_pause_cpu(1);
 		}
 	}
 	/*
@@ -350,7 +360,6 @@ BOOL CALLBACK DbgDlgProc(
 				UI_OnChkRegs();
 				return TRUE;
 
-
 			case IDC_CHK_BOOT_PAUSE:
 				UI_OnChkBootPause();
 				return TRUE;
@@ -400,7 +409,9 @@ BOOL CALLBACK DbgDlgProc(
 			case IDC_BTN_LOAD:
 				UI_OnBtnLoad();
 				return TRUE;
-
+			case IDC_BTN_STEP:
+				__agemo_step_next_instruction();
+				return TRUE;
 		}
 		return FALSE;
 	default:
@@ -453,10 +464,12 @@ void UI_OnChkLog()
 	if (0 == n) 
 	{
 		AgemoTrace("log disabled");
+		agemo_paused_disassembly_chk = 0;
 	}
 	else
 	{
 		AgemoTrace("log enabled");
+		agemo_paused_disassembly_chk = 1;
 	}
 
 	agemo_flag_log = n;
@@ -510,6 +523,25 @@ void UI_OnChkCdromRead()
 
 }
 
+void __agemo_step_next_instruction()
+{
+	// SetForegroundWindow(hAgemoMainWnd);
+	if (agemo_flag_pause_cpu == 1) {
+		execIStep();
+		//Sleep(30);
+		//SuspendThread(hAgemoMainThread);
+		//SetThreadPriority(hAgemoMainThread, THREAD_PRIORITY_IDLE);
+		__agemo_show_next_instruction(0);
+		__agemo_show_regs();
+		//__agemo_update_cpu_button_state();
+		__agemo_log_flush();
+	}
+	else {
+		AgemoTrace("debugger must be paused first to step through instructions!");
+	}
+	//__agemo_update_cpu_button_state();
+}
+
 void __agemo_update_cpu_button_state()
 {
 	if (agemo_flag_pause_cpu)
@@ -520,31 +552,47 @@ void __agemo_update_cpu_button_state()
 }
 void __agemo_resume_cpu()
 {
+	if (!agemo_flag_pause_cpu) {
+		MessageBox(hRegs, "Unexpected - you shouldn't be able to resume if the pause flag is not set...", "err", 0);
+	}
+	else {
 		// SetForegroundWindow(hAgemoMainWnd);
 		agemo_flag_pause_cpu = 0;
 		agemo_is_pause_resume = 1;
+		if (!agemo_flag_log) agemo_paused_disassembly_chk = 0;
 
 		AgemoTrace("cpu resume. PC at [%X], ops [%d]", psxRegs.pc, agemo_ops_total_exec);
 
-		SetThreadPriority(hAgemoMainThread, THREAD_PRIORITY_NORMAL);
-		ResumeThread(hAgemoMainThread);
+		//SetThreadPriority(hAgemoMainThread, THREAD_PRIORITY_NORMAL);
+		//ResumeThread(hAgemoMainThread);
 		__agemo_update_cpu_button_state();
-
+	}
 }
 void __agemo_pause_cpu(int is_exec_ing)
 {
 	    // SetForegroundWindow(hAgemoMainWnd);
+	if (!agemo_flag_pause_cpu) {
+		agemo_paused_disassembly_chk = 1;
+		firstinstruction = 1;
 		agemo_flag_pause_cpu = 1;
 		__agemo_update_cpu_button_state();
-		
+
 		//Sleep(30);
-		SuspendThread(hAgemoMainThread);
-		SetThreadPriority(hAgemoMainThread, THREAD_PRIORITY_IDLE);
+
 		__agemo_show_next_instruction(is_exec_ing);
 		__agemo_show_regs();
 		__agemo_update_cpu_button_state();
 		__agemo_log_flush();
-
+		//SuspendThread(hAgemoMainThread);
+		//SetThreadPriority(hAgemoMainThread, THREAD_PRIORITY_IDLE);
+	}
+	else {
+		agemo_paused_disassembly_chk = 1;
+		__agemo_show_next_instruction(is_exec_ing);
+		__agemo_show_regs();
+		__agemo_update_cpu_button_state();
+		__agemo_log_flush();
+	}
 }
 void UI_OnBtnPause()
 {
@@ -985,9 +1033,9 @@ void UI_OnBtnLoad()
 
 void Agemo_OP_Over()
 {
-	AgemoTrace("op exec over");
+	AgemoTrace("PC breakpoint at [%X], ops [%d]", psxRegs.pc, agemo_ops_total_exec);
 
-	__agemo_show_next_instruction(0);
+	__agemo_show_next_instruction(2);
 	__agemo_show_regs();
 	__agemo_update_cpu_button_state();
 	__agemo_log_flush();
@@ -1006,7 +1054,8 @@ void __agemo_show_regs()
 		"s0=%08X s1=%08X s2=%08X s3=%08X s4=%08x\r\n"
 		"s5=%08X s6=%08X s7=%08X s8=%08X \r\n"
 		"gp=%08X k0=%08X k1=%08X lo=%08X hi=%08X\r\n"
-		"pc=%08X code=%08X cycle=%08X interrupt=%08X",
+		"pc=%08X code=%08X cycle=%08X interrupt=%08X\r\n"
+		"rt=%08X",
 		psxRegs.GPR.n.a0, psxRegs.GPR.n.a1, psxRegs.GPR.n.a2, psxRegs.GPR.n.a3,
 		psxRegs.GPR.n.v0, psxRegs.GPR.n.v1, psxRegs.GPR.n.at, psxRegs.GPR.n.ra, psxRegs.GPR.n.sp,
 		psxRegs.GPR.n.t0, psxRegs.GPR.n.t1, psxRegs.GPR.n.t2, psxRegs.GPR.n.t3, psxRegs.GPR.n.t4,
@@ -1014,12 +1063,32 @@ void __agemo_show_regs()
 		psxRegs.GPR.n.s0, psxRegs.GPR.n.s1, psxRegs.GPR.n.s2, psxRegs.GPR.n.s3, psxRegs.GPR.n.s4,
 		psxRegs.GPR.n.s5, psxRegs.GPR.n.s6, psxRegs.GPR.n.s7, psxRegs.GPR.n.s8,
 		psxRegs.GPR.n.gp, psxRegs.GPR.n.k0, psxRegs.GPR.n.k1, psxRegs.GPR.n.lo, psxRegs.GPR.n.hi,
-		psxRegs.pc, psxRegs.code, psxRegs.cycle, psxRegs.interrupt
+		psxRegs.pc, psxRegs.code, psxRegs.cycle, psxRegs.interrupt, psxRegs.GPR.r[_Rt_]
 		);
 
-
-
 	SetDlgItemText(hRegs, IDC_ED_REGS, pBuf);
+
+	sprintf(pBuf,
+		"a0=%08X a1=%08X a2=%08X a3=%08X \r\n"
+		"v0=%08X v1=%08X at=%08X ra=%08X sp=%08X\r\n"
+		"t0=%08X t1=%08X t2=%08X t3=%08X t4=%08x\r\n"
+		"t5=%08X t6=%08X t7=%08X t8=%08X t9=%08x\r\n"
+		"s0=%08X s1=%08X s2=%08X s3=%08X s4=%08x\r\n"
+		"s5=%08X s6=%08X s7=%08X s8=%08X \r\n"
+		"gp=%08X k0=%08X k1=%08X lo=%08X hi=%08X\r\n"
+		"pc=%08X code=%08X cycle=%08X interrupt=%08X\r\n"
+		"rt=%08X",
+		psxRegsPrev.GPR.n.a0, psxRegsPrev.GPR.n.a1, psxRegsPrev.GPR.n.a2, psxRegsPrev.GPR.n.a3,
+		psxRegsPrev.GPR.n.v0, psxRegsPrev.GPR.n.v1, psxRegsPrev.GPR.n.at, psxRegsPrev.GPR.n.ra, psxRegsPrev.GPR.n.sp,
+		psxRegsPrev.GPR.n.t0, psxRegsPrev.GPR.n.t1, psxRegsPrev.GPR.n.t2, psxRegsPrev.GPR.n.t3, psxRegsPrev.GPR.n.t4,
+		psxRegsPrev.GPR.n.t5, psxRegsPrev.GPR.n.t6, psxRegsPrev.GPR.n.t7, psxRegsPrev.GPR.n.t8, psxRegsPrev.GPR.n.t9,
+		psxRegsPrev.GPR.n.s0, psxRegsPrev.GPR.n.s1, psxRegsPrev.GPR.n.s2, psxRegsPrev.GPR.n.s3, psxRegsPrev.GPR.n.s4,
+		psxRegsPrev.GPR.n.s5, psxRegsPrev.GPR.n.s6, psxRegsPrev.GPR.n.s7, psxRegsPrev.GPR.n.s8,
+		psxRegsPrev.GPR.n.gp, psxRegsPrev.GPR.n.k0, psxRegsPrev.GPR.n.k1, psxRegsPrev.GPR.n.lo, psxRegsPrev.GPR.n.hi,
+		psxRegsPrev.pc, psxRegsPrev.code, psxRegsPrev.cycle, psxRegsPrev.interrupt, psxRegsPrev.GPR.r[_Rt_]
+	);
+
+	SetDlgItemText(hRegs, IDC_ED_REGS2, pBuf);
 
 }
 
@@ -1043,22 +1112,26 @@ void __agemo_show_next_instruction(int is_exec_ing)
 	//SetDlgItemText(hDbg, IDC_ED_OP_CODE, pBuf);
 
 	__agemo_update_total_op();
-	
-	TraceEditbox(IDC_ED_OP, pLastDisasm, 0);
 
-	if (is_exec_ing)
+	if (is_exec_ing == 1)
 		p = disR3000AF(psxRegs.code, psxRegs.pc-4);
-	else
+	if (is_exec_ing == 2)
 		p = disR3000AF(psxRegs.code, psxRegs.pc);
+	else
+		p = disR3000AF(psxRegs.code, psxRegs.pc-4);
 
 	strncpy(pLastDisasm, p, sizeof(pLastDisasm)-1);
+
+	if (firstinstruction && pLastDisasm != "") {
+		firstinstruction = 0;
+		TraceEditbox(IDC_ED_OP, pLastDisasm, 0);
+	}
 
 	//显示下一条指令（还未执行）
 	SetDlgItemText(hDbg, IDC_ED_OP_DISASM, p);
 
 	//psxRegs.pc
 }
-
 
 void __agemo_reg_update()
 {
@@ -1119,11 +1192,13 @@ void __agemo_reg_update()
 	if (strncmp(pAdrBuf, "code", 4) == 0){ psxRegs.code = val; return;}
 	if (strncmp(pAdrBuf, "interrupt", 4) == 0){ psxRegs.interrupt = val; return;}
 	if (strncmp(pAdrBuf, "cycle", 4) == 0){ psxRegs.cycle = val; return;}
+	if (strncmp(pAdrBuf, "rt", 4) == 0) { psxRegs.GPR.r[_Rt_] = val; return; }
 
 	MessageBox(hRegs, "unknown regs", "err", 0);
 
 
 }
+
 void __agemo_mem_update()
 {
 	char pAdrBuf[1024];

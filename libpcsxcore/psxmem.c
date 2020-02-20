@@ -62,6 +62,47 @@ u8 **psxMemRLUT = NULL;
 0xbfc0_0000-0xbfc7_ffff		BIOS Mirror (512K) Uncached
 */
 
+void doublecheck_value(u32 mem) {
+	u32 checkvalue = 0x8011627C;
+	u16 plusorminus = 0x8;
+
+	if (mem == checkvalue || mem < (u32)(checkvalue + plusorminus) && mem > (u32)(checkvalue + plusorminus)) {
+		mem = mem;
+	}
+	else {
+		if ((u32)(checkvalue & 0xffffff) == mem || (u32)(checkvalue & 0xffffff) < (u32)(mem + plusorminus) && (u32)(checkvalue & 0xffffff) > (u32)(mem - plusorminus)) {
+			mem = mem;
+		}
+		if ((u32)(checkvalue + 0x20000000) == mem || (u32)(checkvalue + 0x20000000) < (u32)(mem + plusorminus) && (u32)(checkvalue + 0x20000000) > (u32)(mem - plusorminus)) {
+			mem = mem;
+		}
+		if ((u32)(checkvalue + 0xA0000000) == mem || (u32)(checkvalue + 0xA0000000) < (u32)(mem + plusorminus) && (u32)(checkvalue + 0xA0000000) > (u32)(mem - plusorminus)) {
+			mem = mem;
+		}
+	}
+}
+
+void doublecheck_value_write(u32 mem, u8 value) {
+	u32 checkvalue = 0x8011627C;
+	u8 checkvalue_value = 0x0;
+	u16 plusorminus = 0x8;
+
+	if (mem == checkvalue && value == checkvalue_value || mem < (u32)(checkvalue + plusorminus) && mem >(u32)(checkvalue + plusorminus) && value == checkvalue_value) {
+		mem = mem;
+	}
+	else {
+		if ((u32)(checkvalue & 0xffffff) == mem && value == checkvalue_value || (u32)(checkvalue & 0xffffff) < (u32)(mem + plusorminus) && (u32)(checkvalue & 0xffffff) > (u32)(mem - plusorminus) && value == checkvalue_value) {
+			mem = mem;
+		}
+		if ((u32)(checkvalue + 0x20000000) == mem && value == checkvalue_value || (u32)(checkvalue + 0x20000000) < (u32)(mem + plusorminus) && (u32)(checkvalue + 0x20000000) > (u32)(mem - plusorminus) && value == checkvalue_value) {
+			mem = mem;
+		}
+		if ((u32)(checkvalue + 0xA0000000) == mem && value == checkvalue_value || (u32)(checkvalue + 0xA0000000) < (u32)(mem + plusorminus) && (u32)(checkvalue + 0xA0000000) > (u32)(mem - plusorminus) && value == checkvalue_value) {
+			mem = mem;
+		}
+	}
+}
+
 int psxMemInit() {
 	int i;
 
@@ -153,6 +194,8 @@ void psxMemShutdown() {
 static int writeok = 1;
 
 u8 psxMemRead8(u32 mem) {
+	doublecheck_value(mem);
+	
 	char *p;
 	u32 t;
 	u8 tValue;
@@ -191,6 +234,8 @@ u8 psxMemRead8(u32 mem) {
 }
 
 u16 psxMemRead16(u32 mem) {
+	doublecheck_value(mem);
+	
 	char *p;
 	u32 t;
 
@@ -230,6 +275,8 @@ u16 psxMemRead16(u32 mem) {
 }
 
 u32 psxMemRead32(u32 mem) {
+	doublecheck_value(mem);
+	
 	char *p;
 	u32 t;
 
@@ -269,6 +316,8 @@ u32 psxMemRead32(u32 mem) {
 }
 
 void psxMemWrite8(u32 mem, u8 value) {
+	doublecheck_value_write(mem,value);
+	
 	char *p;
 	u32 t;
 
@@ -301,6 +350,9 @@ void psxMemWrite8(u32 mem, u8 value) {
 }
 
 void psxMemWrite16(u32 mem, u16 value) {
+
+	doublecheck_value_write(mem, value);
+
 	char *p;
 	u32 t;
 
@@ -333,6 +385,9 @@ void psxMemWrite16(u32 mem, u16 value) {
 }
 
 void psxMemWrite32(u32 mem, u32 value) {
+
+	doublecheck_value_write(mem, value);
+
 	char *p;
 	u32 t;
 

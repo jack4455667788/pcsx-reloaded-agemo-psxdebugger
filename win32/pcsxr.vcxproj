@@ -470,6 +470,7 @@
     <ClInclude Include="intl\libintl.h" />
     <ClInclude Include="intl\loadinfo.h" />
     <ClInclude Include="config.h" />
+    <ClInclude Include="..\libpcsxcore\psxinterpreter.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="zlib\deflate.h" />
     <ClInclude Include="zlib\infblock.h" />

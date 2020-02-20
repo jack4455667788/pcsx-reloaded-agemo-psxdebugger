@@ -394,7 +394,7 @@ u32 psxHwRead32(u32 add) {
 
 void psxHwWrite8(u32 add, u8 value) {
 	switch (add) {
-		case 0x1f801040: sioWrite8(value); break;
+		case 0x1f801040: sioWrite8(value); break; //controller IO port
 #ifdef ENABLE_SIO1API
 		case 0x1f801050: SIO1_writeData8(value); break;
 #endif

@@ -1928,13 +1928,13 @@ void CreateMainWindow(int nCmdShow) {
 						NULL);
 
 	gApp.hWnd = hWnd;
-	hAgemoMainWnd = hWnd;
+	//hAgemoMainWnd = hWnd;
 
-	 DuplicateHandle(GetCurrentProcess(), GetCurrentThread(),
-		GetCurrentProcess(), &hAgemoMainThread,
-		0, FALSE, DUPLICATE_SAME_ACCESS);
+	 //DuplicateHandle(GetCurrentProcess(), GetCurrentThread(),
+		//GetCurrentProcess(), &hAgemoMainThread,
+		//0, FALSE, DUPLICATE_SAME_ACCESS);
 
-	//hAgemoMainThread = GetCurrentThread();
+	//hAgemoMainThread = hWnd;//GetCurrentThread();
 
 	CreateMainMenu();
 	SetMenu(gApp.hWnd, gApp.hMenu);

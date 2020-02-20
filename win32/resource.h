@@ -415,12 +415,14 @@
 #define IDC_BTN_S                       51032
 #define IDC_BTN_L                       51033
 #define IDC_CHK_ALIGN                   51034
+#define IDC_BTN_STEP                    51035
+#define IDC_ED_REGS2                    51036
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        119
+#define _APS_NEXT_RESOURCE_VALUE        120
 #define _APS_NEXT_COMMAND_VALUE         40047
 #define _APS_NEXT_CONTROL_VALUE         1061
 #define _APS_NEXT_SYMED_VALUE           103

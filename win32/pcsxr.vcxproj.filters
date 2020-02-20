@@ -409,6 +409,9 @@
     <ClInclude Include="..\Agemo\prim.h">
       <Filter>Agemo</Filter>
     </ClInclude>
+    <ClInclude Include="..\libpcsxcore\psxinterpreter.h">
+      <Filter>libpcsxcore</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="gui\about.bmp">
